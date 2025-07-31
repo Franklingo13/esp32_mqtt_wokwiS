@@ -2,8 +2,4 @@
 version = 1
 firmware = 'build/flasher_args.json'
 gdbServerPort=3333
-
-[[net.wifi]]
-ssid = "Alejate_de_mi_WiFi"
-password = "0107100596nand74ls00"
-signal = -50
+private_gateway = true
