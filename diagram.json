@@ -89,7 +89,23 @@
       "rotate": 90,
       "attrs": { "value": "300" }
     },
-    { "type": "wokwi-gnd", "id": "gnd5", "top": 115.2, "left": -173.4, "rotate": 90, "attrs": {} }
+    { "type": "wokwi-gnd", "id": "gnd5", "top": 115.2, "left": -173.4, "rotate": 90, "attrs": {} },
+    {
+      "type": "wokwi-led",
+      "id": "led3",
+      "top": 277.6,
+      "left": -17.8,
+      "rotate": 270,
+      "attrs": { "color": "blue" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r3",
+      "top": 301.85,
+      "left": 27.4,
+      "rotate": 180,
+      "attrs": { "value": "300" }
+    }
   ],
   "connections": [
     [ "esp:TX", "$serialMonitor:RX", "", [] ],
@@ -128,18 +144,24 @@
     [ "dht1:VCC", "bb1:tp.25", "red", [ "h0" ] ],
     [ "gnd4:GND", "dht1:GND", "black", [ "v0" ] ],
     [ "esp:13", "dht1:SDA", "green", [ "h9.75", "v76.8" ] ],
+    [ "led1:C", "led2:C", "black", [ "h0", "v28.4", "h48" ] ],
+    [ "led2:C", "r2:1", "black", [ "h0" ] ],
+    [ "relay1:NO", "led2:A", "cyan", [ "v-49.2", "h-1.8" ] ],
+    [ "relay1:NC", "led1:A", "green", [ "v-20.4", "h-78" ] ],
+    [ "gnd5:GND", "r2:2", "black", [ "v0" ] ],
+    [ "vcc2:VCC", "relay1:COM", "red", [ "v0", "h-38.4" ] ],
+    [ "bb1:25t.a", "esp:12", "magenta", [ "h0" ] ],
     [ "btn1:1.l", "bb1:5b.h", "", [ "$bb" ] ],
     [ "btn1:2.l", "bb1:7b.h", "", [ "$bb" ] ],
     [ "btn1:1.r", "bb1:5t.c", "", [ "$bb" ] ],
     [ "btn1:2.r", "bb1:7t.c", "", [ "$bb" ] ],
     [ "r1:1", "bb1:7t.a", "", [ "$bb" ] ],
     [ "r1:2", "bb1:13t.a", "", [ "$bb" ] ],
-    [ "led1:C", "led2:C", "black", [ "h0", "v28.4", "h48" ] ],
-    [ "led2:C", "r2:1", "black", [ "h0" ] ],
-    [ "relay1:NO", "led2:A", "cyan", [ "v-49.2", "h-1.8" ] ],
-    [ "relay1:NC", "led1:A", "green", [ "v-20.4", "h-78" ] ],
-    [ "gnd5:GND", "r2:2", "black", [ "v0" ] ],
-    [ "vcc2:VCC", "relay1:COM", "red", [ "v0", "h-38.4" ] ]
+    [ "r3:1", "bb1:25t.b", "", [ "$bb" ] ],
+    [ "r3:2", "bb1:25b.f", "", [ "$bb" ] ],
+    [ "bb1:bn.20", "bb1:24b.j", "black", [ "h0" ] ],
+    [ "led3:A", "bb1:24b.g", "", [ "$bb" ] ],
+    [ "led3:C", "bb1:25b.g", "", [ "$bb" ] ]
   ],
   "dependencies": {}
 }
