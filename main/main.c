@@ -38,8 +38,8 @@
 #define SDA_DHT_PIN GPIO_NUM_13
 
 // Parámetros WiFi
-#define WIFI_SSID "Alejate_de_mi_WiFi"
-#define WIFI_PASSWORD "0107100596nand74ls00"
+#define WIFI_SSID "Wokwi-GUEST" // red visible en Wokwi, sin contraseña
+#define WIFI_PASSWORD "" // red visible en Wokwi, sin contraseña
 
 // Evento
 static EventGroupHandle_t wifi_event_group;
@@ -49,11 +49,15 @@ const int WIFI_CONNECTED_BIT = BIT0;
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, 
                               int32_t event_id, void *event_data) {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+        printf("WiFi STA iniciado, conectando...\n");
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        printf("WiFi desconectado, reconectando...\n");
         xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
         esp_wifi_connect();
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+        printf("IP obtenida: " IPSTR "\n", IP2STR(&event->ip_info.ip));
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
