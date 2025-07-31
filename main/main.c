@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
@@ -12,6 +13,9 @@
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "nvs_flash.h"
+#include "esp_netif.h"
+#include "lwip/err.h"
+#include "lwip/sys.h"
 
 // LED estado --> GPIO 12
 // NTC --> GPIO 34
@@ -55,7 +59,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
 }
 
 // Función de configuración de led de estado
-static void configure_led(void) {
+void configure_led(void) {
     gpio_reset_pin(LED_STATUS);
     gpio_set_direction(LED_STATUS, GPIO_MODE_OUTPUT);
 }
@@ -98,41 +102,42 @@ void app_main(void)
 
     // Inicializar NVS
     esp_err_t ret = nvs_flash_init();
-  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    ret = nvs_flash_init();
-  }
-  ESP_ERROR_CHECK(ret);
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
 
-  // Inicializar pila TCP/IP
-  esp_netif_init();
+    // Inicializar pila TCP/IP
+    esp_netif_init();
 
-  // Crear el bucle de eventos predeterminado
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
+    // Crear el bucle de eventos predeterminado
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-  // Crear la estación Wi-Fi predeterminada
-  esp_netif_create_default_wifi_sta();
+    // Crear la estación Wi-Fi predeterminada
+    esp_netif_create_default_wifi_sta();
 
-  // Crear el grupo de eventos para manejar eventos de Wi-Fi
-  wifi_event_group = xEventGroupCreate();
+    // Crear el grupo de eventos para manejar eventos de Wi-Fi
+    wifi_event_group = xEventGroupCreate();
 
-  // Mostrar el estado de conexión WiFi
-  xTaskCreate(led_task, "led_task", 2048, NULL, 5, NULL);
+    // Mostrar el estado de conexión WiFi
+    xTaskCreate(led_task, "led_task", 2048, NULL, 5, NULL);
 
-  // Iniciar driver WiFi
-  wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_wifi_init(&wifi_init_config));
+    // Iniciar driver WiFi
+    wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&wifi_init_config));
 
     // Registrar el manejador de eventos de WiFi
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-                  ESP_EVENT_ANY_ID,
-                  &wifi_event_handler,
-                  NULL, NULL));
-  ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+                                                        ESP_EVENT_ANY_ID,
+                                                        &wifi_event_handler,
+                                                        NULL, NULL));
+
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
                   IP_EVENT_STA_GOT_IP,
                   &wifi_event_handler,
                   NULL, NULL));
-
     // Configurar ajustes de conexión WiFi
     wifi_config_t wifi_config = {
         .sta = {
@@ -140,7 +145,7 @@ void app_main(void)
             .password = WIFI_PASSWORD,
         },
     };
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
+
 
     // Configurar modo STA de WiFi
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
