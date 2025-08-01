@@ -54,6 +54,7 @@
 #define TOPIC_HUMIDITY "patio/vivero/humedad" // Topic para publicar humedad
 #define TOPIC_NIVEL "patio/vivero/nivel" // Topic para publicar nivel de agua
 #define TOPIC_RIEGO "patio/vivero/riego" // Topic para controlar el riego: activa el relé
+#define TOPIC_NTC "patio/pecera/temperatura" // Topic para publicar temperatura NTC
 
 // Variables globales
 static esp_mqtt_client_handle_t mqtt_client = NULL;
@@ -61,7 +62,9 @@ static bool mqtt_connected = false;
 static bool relay_state = false;  // Variable para controlar el estado del relé
 const float NTC_BETA = 3950.0; // Constante B del NTC
 float humedad = 0.0, temperatura = 0.0;
-
+// AGREGAR: Variable global para el ADC
+static adc_oneshot_unit_handle_t adc1_handle = NULL;
+static bool adc_initialized = false;
 
 // Definición de grupo de eventos WiFi
 static EventGroupHandle_t wifi_event_group;
@@ -344,6 +347,18 @@ void publish_relay_status(bool state) {
     }
 }
 
+// Función para publicar temperatuta NTC
+void publish_ntc_temperature(float temperature) {
+    if (mqtt_client != NULL) {
+        char data[50];
+        snprintf(data, sizeof(data), "%.2f", temperature);
+        int msg_id = esp_mqtt_client_publish(mqtt_client, TOPIC_NTC, data, 0, 1, 0);
+        ESP_LOGI(TAG, "Temperatura NTC publicada: %s, msg_id=%d", data, msg_id);
+    } else {
+        ESP_LOGE(TAG, "Cliente MQTT no inicializado, no se puede publicar temperatura NTC.");
+    }
+}
+
 // Función para publicar datos en ThingSpeak
 void publish_to_thingspeak(const char *data)
 {
@@ -431,6 +446,58 @@ void read_dht22(void)
     }
 }
 
+// AGREGAR: Función para inicializar el ADC una sola vez
+void init_adc(void) {
+    if (!adc_initialized) {
+        adc_oneshot_unit_init_cfg_t init_config = {
+            .unit_id = ADC_UNIT_1,
+        };
+        ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config, &adc1_handle));
+
+        adc_oneshot_chan_cfg_t channel_config = {
+            .bitwidth = ADC_BITWIDTH_12,
+            .atten = ADC_ATTEN_DB_11,
+        };
+        ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, ADC_CHANNEL_6, &channel_config));
+        
+        adc_initialized = true;
+        ESP_LOGI(TAG, "ADC inicializado correctamente");
+    }
+}
+
+// Función para lectura de NTC
+void read_ntc_temperature(void)
+{
+    if (!adc_initialized) {
+        ESP_LOGE(TAG, "ADC no inicializado");
+        return;
+    }
+
+    int ntc_analog_value = 0;
+    esp_err_t ret = adc_oneshot_read(adc1_handle, ADC_CHANNEL_6, &ntc_analog_value);
+    
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Error al leer ADC: %s", esp_err_to_name(ret));
+        return;
+    }
+
+    // Validar lectura del ADC
+    if (ntc_analog_value <= 0 || ntc_analog_value >= 4095) {
+        ESP_LOGW(TAG, "Lectura ADC fuera de rango: %d", ntc_analog_value);
+        return;
+    }
+
+    // Calcular temperatura
+    float resistance = (4095.0 - ntc_analog_value) / ntc_analog_value * 10000.0;
+    float temperature_kelvin = 1 / (log(1 / (4095.0 / ntc_analog_value - 1)) / NTC_BETA + 1.0 / 298.15);
+    float temperature_celsius = temperature_kelvin - 273.15;
+    
+    ESP_LOGI(TAG, "NTC - ADC: %d, Resistencia: %.2f ohm, Temperatura: %.2f °C", 
+             ntc_analog_value, resistance, temperature_celsius);
+    
+    publish_ntc_temperature(temperature_celsius);
+}
+
 // Función para leer sensores y publicar datos
 void sensor_task(void *pvParameter)
 {
@@ -461,10 +528,13 @@ void sensor_task(void *pvParameter)
             read_dht22(); // Leer DHT22 y publicar temperatura y humedad
             publish_water_level(distancia);   // Publicar nivel de agua
             // Activar el relé si se recibe un True en el topic de riego
-            subscribe_to_relay_topic(); // Suscribirse al topic de riego
+            //subscribe_to_relay_topic(); // Suscribirse al topic de riego
 
             // Lógica de control
             activate_relay(relay_state);
+
+            // Leer temperatura NTC
+            read_ntc_temperature();
 
 
             // Intervalo de 16 segundos para ThingSpeak
@@ -516,6 +586,7 @@ void app_main(void)
 
     configure_led();
     configure_relay(); // Configurar el relé
+    init_adc(); // Inicializar ADC una sola vez
 
     // Inicializar NVS
     esp_err_t ret = nvs_flash_init();
