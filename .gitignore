@@ -126,3 +126,4 @@ dependencies.lock
 *.bin
 *.map
 *.log
+.vscode/settings.json
