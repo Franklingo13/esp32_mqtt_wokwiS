@@ -59,6 +59,8 @@
 static esp_mqtt_client_handle_t mqtt_client = NULL;
 static bool mqtt_connected = false;
 static bool relay_state = false;  // Variable para controlar el estado del relé
+const float NTC_BETA = 3950.0; // Constante B del NTC
+float humedad = 0.0, temperatura = 0.0;
 
 
 // Definición de grupo de eventos WiFi
@@ -407,6 +409,28 @@ void activate_relay(bool state) {
     }
 }
 
+// Configuración del DHT22
+void read_dht22(void)
+{
+    dht_sensor_type_t sensor_type = DHT_TYPE_AM2301; // DHT22
+    gpio_num_t dht_gpio = SDA_DHT_PIN;
+    gpio_pullup_en(dht_gpio);
+
+    // Leer datos del sensor DHT22
+    esp_err_t result = dht_read_float_data(sensor_type, dht_gpio, &humedad, &temperatura);
+    if (result == ESP_OK)
+    {
+        ESP_LOGI("DHT22", "Temperatura: %.1f °C, Humedad: %.1f %%", temperatura, humedad);
+        // Publicar los datos leídos
+        publish_temperature(temperatura);
+        publish_humidity(humedad);
+    }
+    else
+    {
+        ESP_LOGE("DHT22", "Error al leer el sensor DHT22: %s", esp_err_to_name(result));
+    }
+}
+
 // Función para leer sensores y publicar datos
 void sensor_task(void *pvParameter)
 {
@@ -431,8 +455,10 @@ void sensor_task(void *pvParameter)
                 ESP_LOGI(TAG, "Distancia medida: %.2f cm", distancia);
             }
 
-            publish_temperature(temperature); // Publicar temperatura
-            publish_humidity(humidity);       // Publicar humedad
+            //publish_temperature(temperature); // Publicar temperatura
+            //publish_humidity(humidity);       // Publicar humedad
+
+            read_dht22(); // Leer DHT22 y publicar temperatura y humedad
             publish_water_level(distancia);   // Publicar nivel de agua
             // Activar el relé si se recibe un True en el topic de riego
             subscribe_to_relay_topic(); // Suscribirse al topic de riego
