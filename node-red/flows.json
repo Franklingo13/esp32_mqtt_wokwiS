@@ -8,37 +8,6 @@
         "env": []
     },
     {
-        "id": "43b596aada11f1fd",
-        "type": "ui_gauge",
-        "z": "862f4876b87d50a6",
-        "name": "",
-        "group": "619e83983fd39156",
-        "order": 0,
-        "width": 0,
-        "height": 0,
-        "gtype": "gage",
-        "title": "gauge",
-        "label": "units",
-        "format": "{{value}}",
-        "min": 0,
-        "max": "100",
-        "colors": [
-            "#00b500",
-            "#e6e600",
-            "#ca3838"
-        ],
-        "seg1": "",
-        "seg2": "",
-        "diff": false,
-        "className": "",
-        "x": 610,
-        "y": 200,
-        "wires": [],
-        "inputLabels": [
-            "26"
-        ]
-    },
-    {
         "id": "01cd8839b6baecad",
         "type": "mqtt in",
         "z": "862f4876b87d50a6",
@@ -55,7 +24,6 @@
         "y": 100,
         "wires": [
             [
-                "43b596aada11f1fd",
                 "b4784e90ea20547e",
                 "aa52d41518d182a8"
             ]
@@ -79,7 +47,7 @@
         "fontSize": 16,
         "color": "#000000",
         "x": 610,
-        "y": 300,
+        "y": 160,
         "wires": []
     },
     {
@@ -129,7 +97,7 @@
         "order": 2,
         "width": 0,
         "height": 0,
-        "label": "chart",
+        "label": "Temperatura Vivero",
         "chartType": "line",
         "legend": "false",
         "xformat": "HH:mm:ss",
@@ -158,7 +126,7 @@
         "outputs": 1,
         "useDifferentColor": false,
         "className": "",
-        "x": 630,
+        "x": 670,
         "y": 400,
         "wires": [
             []
@@ -181,37 +149,16 @@
         "y": 500,
         "wires": [
             [
-                "3d0a05210e832acf"
+                "fbeac0b410a643dd"
             ]
         ]
-    },
-    {
-        "id": "3d0a05210e832acf",
-        "type": "ui_text",
-        "z": "862f4876b87d50a6",
-        "group": "619e83983fd39156",
-        "order": 3,
-        "width": 0,
-        "height": 0,
-        "name": "",
-        "label": "text",
-        "format": "{{msg.payload}}",
-        "layout": "row-spread",
-        "className": "",
-        "style": false,
-        "font": "",
-        "fontSize": 16,
-        "color": "#000000",
-        "x": 630,
-        "y": 500,
-        "wires": []
     },
     {
         "id": "0383bc5aa01d63da",
         "type": "ui_led",
         "z": "862f4876b87d50a6",
         "order": 4,
-        "group": "619e83983fd39156",
+        "group": "5e1c169ae5311a0a",
         "width": 0,
         "height": 0,
         "label": "",
@@ -234,7 +181,7 @@
         "showGlow": true,
         "name": "",
         "x": 750,
-        "y": 580,
+        "y": 640,
         "wires": []
     },
     {
@@ -251,10 +198,11 @@
         "rh": 0,
         "inputs": 0,
         "x": 580,
-        "y": 580,
+        "y": 640,
         "wires": [
             [
-                "0383bc5aa01d63da"
+                "0383bc5aa01d63da",
+                "b278b29076b9b948"
             ]
         ]
     },
@@ -263,9 +211,9 @@
         "type": "ui_switch",
         "z": "862f4876b87d50a6",
         "name": "",
-        "label": "switch",
+        "label": "Activar riego",
         "tooltip": "",
-        "group": "619e83983fd39156",
+        "group": "5e1c169ae5311a0a",
         "order": 5,
         "width": 0,
         "height": 0,
@@ -284,8 +232,8 @@
         "offcolor": "",
         "animate": false,
         "className": "",
-        "x": 170,
-        "y": 580,
+        "x": 190,
+        "y": 640,
         "wires": [
             [
                 "b30dc84d10224c89"
@@ -307,19 +255,167 @@
         "expiry": "",
         "broker": "fe82af2caa610c16",
         "x": 390,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "fbeac0b410a643dd",
+        "type": "ui_gauge",
+        "z": "862f4876b87d50a6",
+        "name": "",
+        "group": "619e83983fd39156",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "Humedad Vivero",
+        "label": "units",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "100",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 670,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "ec359ee191af701a",
+        "type": "ui_gauge",
+        "z": "862f4876b87d50a6",
+        "name": "",
+        "group": "5e1c169ae5311a0a",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "Nivel de agua",
+        "label": "units",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "100",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 680,
+        "y": 780,
+        "wires": []
+    },
+    {
+        "id": "e82bd3e028f04fde",
+        "type": "mqtt in",
+        "z": "862f4876b87d50a6",
+        "name": "patioRiego",
+        "topic": "patio/vivero/nivel",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "fe82af2caa610c16",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 300,
+        "y": 780,
+        "wires": [
+            [
+                "ec359ee191af701a"
+            ]
+        ]
+    },
+    {
+        "id": "b278b29076b9b948",
+        "type": "debug",
+        "z": "862f4876b87d50a6",
+        "name": "debug Riego",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 770,
         "y": 580,
         "wires": []
     },
     {
-        "id": "619e83983fd39156",
-        "type": "ui_group",
-        "name": "Grupo1",
-        "tab": "63f5f25f58b1e2c1",
-        "order": 1,
-        "disp": true,
-        "width": 6,
-        "collapse": false,
-        "className": ""
+        "id": "0e0fea0254c7ccd4",
+        "type": "mqtt in",
+        "z": "862f4876b87d50a6",
+        "name": "patioTemp",
+        "topic": "patio/pecera/temperatura",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "fe82af2caa610c16",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 280,
+        "y": 900,
+        "wires": [
+            [
+                "ea39424d1d837319"
+            ]
+        ]
+    },
+    {
+        "id": "ea39424d1d837319",
+        "type": "ui_chart",
+        "z": "862f4876b87d50a6",
+        "name": "",
+        "group": "082b2241c0103ce0",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "label": "Temperatura Pecera",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 700,
+        "y": 900,
+        "wires": [
+            []
+        ]
     },
     {
         "id": "fe82af2caa610c16",
@@ -351,6 +447,39 @@
         "willMsg": {},
         "userProps": "",
         "sessionExpiry": ""
+    },
+    {
+        "id": "619e83983fd39156",
+        "type": "ui_group",
+        "name": "Vivero",
+        "tab": "63f5f25f58b1e2c1",
+        "order": 1,
+        "disp": true,
+        "width": 6,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "5e1c169ae5311a0a",
+        "type": "ui_group",
+        "name": "Riego",
+        "tab": "63f5f25f58b1e2c1",
+        "order": 2,
+        "disp": true,
+        "width": 6,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "082b2241c0103ce0",
+        "type": "ui_group",
+        "name": "Pecera",
+        "tab": "63f5f25f58b1e2c1",
+        "order": 3,
+        "disp": true,
+        "width": 6,
+        "collapse": false,
+        "className": ""
     },
     {
         "id": "63f5f25f58b1e2c1",
