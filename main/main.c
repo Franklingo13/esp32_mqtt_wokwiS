@@ -53,8 +53,12 @@
 #define TOPIC_TEMP "patio/vivero/temperatura" // Topic para publicar temperatura
 #define TOPIC_HUMIDITY "patio/vivero/humedad" // Topic para publicar humedad
 #define TOPIC_NIVEL "patio/vivero/nivel" // Topic para publicar nivel de agua
+#define TOPIC_RIEGO "patio/vivero/riego" // Topic para controlar el riego: activa el relé
+
+// Variables globales
 static esp_mqtt_client_handle_t mqtt_client = NULL;
 static bool mqtt_connected = false;
+static bool relay_state = false;  // Variable para controlar el estado del relé
 
 
 // Definición de grupo de eventos WiFi
@@ -84,6 +88,13 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
 void configure_led(void) {
     gpio_reset_pin(LED_STATUS);
     gpio_set_direction(LED_STATUS, GPIO_MODE_OUTPUT);
+}
+
+// Función de configuración de relé
+void configure_relay(void) {
+    gpio_reset_pin(RELAY_PIN);
+    gpio_set_direction(RELAY_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_level(RELAY_PIN, 0);  // Iniciar apagado
 }
 
 // Función de visualización de estado de conexión WiFi
@@ -130,10 +141,15 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED - Conectado al broker MQTT");
         mqtt_connected = true;
 
-        // Suscribirse a topics de control (para enviar comandos)
+        // AGREGAR: Suscribirse al topic de riego AL CONECTARSE
+        msg_id = esp_mqtt_client_subscribe(client, TOPIC_RIEGO, 0);
+        ESP_LOGI(TAG, "Suscripción al topic de riego realizada, msg_id=%d", msg_id);
+
+        // Mensaje inicial de prueba
         msg_id = esp_mqtt_client_publish(client, TOPIC_TS, 
             "field1=45&field2=60&status=MQTTPUBLISH", 0, 0, 0);
-        ESP_LOGI(TAG, "Publicación realizada, msg_id=%d", msg_id);
+        ESP_LOGI(TAG, "Publicación de prueba realizada, msg_id=%d", msg_id);
+        
 
         //msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
         //ESP_LOGI(TAG, "Suscripción realizada, msg_id=%d", msg_id);
@@ -164,6 +180,21 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         ESP_LOGI(TAG, "MQTT_EVENT_DATA");
         printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
         printf("DATA=%.*s\r\n", event->data_len, event->data);
+        // AGREGAR: Procesar mensajes del topic de riego
+        if (strncmp(event->topic, TOPIC_RIEGO, event->topic_len) == 0) {
+            // Verificar el contenido del mensaje
+            if (strncmp(event->data, "true", event->data_len) == 0 || 
+                strncmp(event->data, "1", event->data_len) == 0 ||
+                strncmp(event->data, "ON", event->data_len) == 0) {
+                relay_state = true;
+                ESP_LOGI(TAG, "Comando recibido: Activar riego");
+            } else if (strncmp(event->data, "false", event->data_len) == 0 || 
+                       strncmp(event->data, "0", event->data_len) == 0 ||
+                       strncmp(event->data, "OFF", event->data_len) == 0) {
+                relay_state = false;
+                ESP_LOGI(TAG, "Comando recibido: Desactivar riego");
+            }
+        }
         break;
     case MQTT_EVENT_ERROR:
         ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
@@ -251,6 +282,20 @@ static void mqtt_app_start(void)
     ESP_LOGI(TAG, "Cliente MQTT iniciado, conectando a %s", mqtt_cfg.broker.address.uri);
 }
 
+
+// *** Funciones para suscribirse y publicar en MQTT ***
+
+// Función para suscribirse al topic de riego
+static void subscribe_to_relay_topic(void)
+{
+    if (mqtt_client != NULL && mqtt_connected) {
+        int msg_id = esp_mqtt_client_subscribe(mqtt_client, TOPIC_RIEGO, 0);
+        ESP_LOGI(TAG, "Suscripción al topic de riego realizada, msg_id=%d", msg_id);
+    } else {
+        ESP_LOGE(TAG, "Cliente MQTT no inicializado o no conectado, no se puede suscribir al topic de riego.");
+    }
+}
+
 // Función para publicar temperatura
 void publish_temperature(float temperature) {
     if (mqtt_client != NULL) {
@@ -287,6 +332,16 @@ void publish_water_level(float level) {
     }
 }
 
+// Función para publicar el estado del relé
+void publish_relay_status(bool state) {
+    if (mqtt_client != NULL) {
+        char data[10];
+        snprintf(data, sizeof(data), "%s", state ? "ON" : "OFF");
+        int msg_id = esp_mqtt_client_publish(mqtt_client, "patio/vivero/riego/status", data, 0, 1, 0);
+        ESP_LOGI(TAG, "Estado del relé publicado: %s, msg_id=%d", data, msg_id);
+    }
+}
+
 // Función para publicar datos en ThingSpeak
 void publish_to_thingspeak(const char *data)
 {
@@ -298,6 +353,8 @@ void publish_to_thingspeak(const char *data)
         ESP_LOGE(TAG, "Cliente MQTT no inicializado, no se puede publicar en ThingSpeak.");
     }
 }
+
+// **** Funciones para leer sensores ****
 
 // Función para leer distancia con HC-SR04
 float leerDistancia() {
@@ -331,6 +388,25 @@ float leerDistancia() {
     return (duration * 34300.0) / 2.0; // Dividir por 2 porque es ida y vuelta
 }
 
+// Modificar activate_relay para publicar el estado
+void activate_relay(bool state) {
+    static bool last_state = false;  // Para evitar cambios innecesarios
+    
+    if (state != last_state) {
+        if (state) {
+            gpio_set_level(RELAY_PIN, 1); // Encender relé
+            ESP_LOGI(TAG, "Relé activado");
+        } else {
+            gpio_set_level(RELAY_PIN, 0); // Apagar relé
+            ESP_LOGI(TAG, "Relé desactivado");
+        }
+        
+        // Publicar el estado del relé
+        publish_relay_status(state);
+        last_state = state;
+    }
+}
+
 // Función para leer sensores y publicar datos
 void sensor_task(void *pvParameter)
 {
@@ -358,9 +434,15 @@ void sensor_task(void *pvParameter)
             publish_temperature(temperature); // Publicar temperatura
             publish_humidity(humidity);       // Publicar humedad
             publish_water_level(distancia);   // Publicar nivel de agua
+            // Activar el relé si se recibe un True en el topic de riego
+            subscribe_to_relay_topic(); // Suscribirse al topic de riego
 
-            // Intervalo de 20 segundos para ThingSpeak
-            vTaskDelay(pdMS_TO_TICKS(20000));
+            // Lógica de control
+            activate_relay(relay_state);
+
+
+            // Intervalo de 16 segundos para ThingSpeak
+            vTaskDelay(pdMS_TO_TICKS(16000));
         } else {
             ESP_LOGW(TAG, "MQTT no conectado, esperando...");
             vTaskDelay(pdMS_TO_TICKS(5000));
@@ -407,6 +489,7 @@ void app_main(void)
     printf("Iniciando aplicación...\n");
 
     configure_led();
+    configure_relay(); // Configurar el relé
 
     // Inicializar NVS
     esp_err_t ret = nvs_flash_init();
