@@ -52,8 +52,10 @@
 #define TOPIC_TS "channels/3017431/publish" // Topic para publicar datos en ThingSpeak
 #define TOPIC_TEMP "patio/vivero/temperatura" // Topic para publicar temperatura
 #define TOPIC_HUMIDITY "patio/vivero/humedad" // Topic para publicar humedad
+#define TOPIC_NIVEL "patio/vivero/nivel" // Topic para publicar nivel de agua
 static esp_mqtt_client_handle_t mqtt_client = NULL;
 static bool mqtt_connected = false;
+
 
 // Definición de grupo de eventos WiFi
 static EventGroupHandle_t wifi_event_group;
@@ -273,6 +275,18 @@ void publish_humidity(float humidity) {
     }
 }
 
+// Función para publicar nivel de agua
+void publish_water_level(float level) {
+    if (mqtt_client != NULL) {
+        char data[50];
+        snprintf(data, sizeof(data), "%.2f", level);
+        int msg_id = esp_mqtt_client_publish(mqtt_client, TOPIC_NIVEL, data, 0, 1, 0);
+        ESP_LOGI(TAG, "Nivel de agua publicado: %s, msg_id=%d", data, msg_id);
+    } else {
+        ESP_LOGE(TAG, "Cliente MQTT no inicializado, no se puede publicar nivel de agua.");
+    }
+}
+
 // Función para publicar datos en ThingSpeak
 void publish_to_thingspeak(const char *data)
 {
@@ -283,6 +297,38 @@ void publish_to_thingspeak(const char *data)
     } else {
         ESP_LOGE(TAG, "Cliente MQTT no inicializado, no se puede publicar en ThingSpeak.");
     }
+}
+
+// Función para leer distancia con HC-SR04
+float leerDistancia() {
+    // Configuración del GPIO para el sensor ultrasónico
+    gpio_set_direction(TRIG_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_direction(ECHO_PIN, GPIO_MODE_INPUT);
+    // Enviar pulso de 10us al pin TRIG
+    gpio_set_level(TRIG_PIN, 1);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    gpio_set_level(TRIG_PIN, 0);
+
+    // Medir el tiempo que tarda el pulso en regresar
+    int64_t start_time = esp_timer_get_time();
+    while (gpio_get_level(ECHO_PIN) == 0) {
+        if (esp_timer_get_time() - start_time > 100000) { // Timeout de 100ms
+            return -1; // Error en la medición
+        }
+    }
+    
+    start_time = esp_timer_get_time();
+    while (gpio_get_level(ECHO_PIN) == 1) {
+        if (esp_timer_get_time() - start_time > 100000) { // Timeout de 100ms
+            return -1; // Error en la medición
+        }
+    }
+    
+    int64_t end_time = esp_timer_get_time();
+    float duration = (end_time - start_time) / 1000000.0; // Convertir a segundos
+
+    // Calcular distancia en cm (34300 cm/s es la velocidad del sonido)
+    return (duration * 34300.0) / 2.0; // Dividir por 2 porque es ida y vuelta
 }
 
 // Función para leer sensores y publicar datos
@@ -302,9 +348,16 @@ void sensor_task(void *pvParameter)
 
             // Lectura de sensores
             // Lógica para leer otros sensores como NTC, HC-SR04, DHT22, etc.
+            float distancia = leerDistancia();
+            if (distancia < 0) {
+                ESP_LOGE(TAG, "Error al leer distancia");
+            } else {
+                ESP_LOGI(TAG, "Distancia medida: %.2f cm", distancia);
+            }
 
             publish_temperature(temperature); // Publicar temperatura
             publish_humidity(humidity);       // Publicar humedad
+            publish_water_level(distancia);   // Publicar nivel de agua
 
             // Intervalo de 20 segundos para ThingSpeak
             vTaskDelay(pdMS_TO_TICKS(20000));
