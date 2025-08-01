@@ -49,6 +49,8 @@
 #define CONFIG_BROKER_USERNAME "PB8HNSc6KDQMDRU1HxYtCBE" // Usuario del broker MQTT (si es necesario)
 #define CONFIG_BROKER_PASSWORD "lZWwPXhhWzTvoePzS3j3ueJp" // Contraseña del broker MQTT (si es necesario)
 #define TOPIC_TS "channels/3012108/publish" // Tema para publicar datos en ThingSpeak
+static esp_mqtt_client_handle_t mqtt_client = NULL;
+static bool mqtt_connected = false;
 
 // Definición de grupo de eventos WiFi
 static EventGroupHandle_t wifi_event_group;
@@ -92,23 +94,6 @@ void led_task(void *pvParameter)
     }
 }
 
-// Función de conexión WiFi
-void wifi_init(void *pvParameter){
-    esp_netif_ip_info_t ip_info;
-
-    // Esperar por la conexión WiFi
-    printf("Conectando a WiFi...\n");
-    xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY);
-    esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), &ip_info);
-    printf("Dirección IP: " IPSTR "\n", IP2STR(&ip_info.ip));
-    printf("Conexión WiFi exitosa.\n");
-
-    while (1)
-    {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-}
-
 // Función para manejar errores
 // Esta función imprime un mensaje de error si el código de error es distinto de cero
 static void log_error_if_nonzero(const char *message, int error_code)
@@ -117,6 +102,7 @@ static void log_error_if_nonzero(const char *message, int error_code)
         ESP_LOGE("MQTT", "Last error %s: 0x%x", message, error_code);
     }
 }
+
 
 /*
  * @brief Event handler registered to receive MQTT events
@@ -136,24 +122,26 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     int msg_id;
     switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
-        ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
+        ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED - Conectado al broker MQTT");
+        mqtt_connected = true;
 
         // Suscribirse a topics de control (para enviar comandos)
         msg_id = esp_mqtt_client_publish(client, TOPIC_TS, 
             "field1=45&field2=60&status=MQTTPUBLISH", 0, 0, 0);
         ESP_LOGI(TAG, "Publicación realizada, msg_id=%d", msg_id);
 
-        msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
-        ESP_LOGI(TAG, "Suscripción realizada, msg_id=%d", msg_id);
+        //msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
+        //ESP_LOGI(TAG, "Suscripción realizada, msg_id=%d", msg_id);
 
-        msg_id = esp_mqtt_client_subscribe(client, "/topic/qos1", 1);
-        ESP_LOGI(TAG, "Suscripción realizada, msg_id=%d", msg_id);
+        //msg_id = esp_mqtt_client_subscribe(client, "/topic/qos1", 1);
+        //ESP_LOGI(TAG, "Suscripción realizada, msg_id=%d", msg_id);
 
-        msg_id = esp_mqtt_client_unsubscribe(client, "/topic/qos1");
-        ESP_LOGI(TAG, "Desuscripción realizada, msg_id=%d", msg_id);
+        //msg_id = esp_mqtt_client_unsubscribe(client, "/topic/qos1");
+        //ESP_LOGI(TAG, "Desuscripción realizada, msg_id=%d", msg_id);
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
+        mqtt_connected = false;
         break;
 
     case MQTT_EVENT_SUBSCRIBED:
@@ -174,6 +162,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     case MQTT_EVENT_ERROR:
         ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
+        mqtt_connected = false;
         if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
             log_error_if_nonzero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
             log_error_if_nonzero("reported from tls stack", event->error_handle->esp_tls_stack_err);
@@ -188,6 +177,8 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     }
 }
 
+
+// Función de inicio de MQTT
 static void mqtt_app_start(void)
 {
     // Construir la URI completa
@@ -233,13 +224,12 @@ static void mqtt_app_start(void)
     }
 #endif /* CONFIG_BROKER_URL_FROM_STDIN */
 
-    esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
-    /* The last argument may be used to pass data to the event handler, in this example mqtt_event_handler */
-    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
-    esp_mqtt_client_start(client);
+    mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
+    esp_mqtt_client_register_event(mqtt_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+    esp_mqtt_client_start(mqtt_client);
+    ESP_LOGI(TAG, "Cliente MQTT iniciado, conectando a %s", mqtt_cfg.broker.address.uri);
 }
 
-static esp_mqtt_client_handle_t mqtt_client = NULL;
 // Función para publicar temperatura
 void publish_temperature(float temperature) {
     if (mqtt_client != NULL) {
@@ -258,6 +248,7 @@ void publish_to_thingspeak(const char *data)
     if (mqtt_client != NULL) {
         int msg_id = esp_mqtt_client_publish(mqtt_client, TOPIC_TS, 
             data, 0, 0, 0);
+        ESP_LOGI(TAG, "Datos publicados en ThingSpeak: %s, msg_id=%d", data, msg_id);
     } else {
         ESP_LOGE(TAG, "Cliente MQTT no inicializado, no se puede publicar en ThingSpeak.");
     }
@@ -267,30 +258,60 @@ void publish_to_thingspeak(const char *data)
 void sensor_task(void *pvParameter)
 {
     while (1) {
-        // Simular lectura de temperatura
-        float temperature = 25.0 + (rand() % 100) / 10.0; // Temperatura aleatoria entre 25.0 y 35.0
-        //publish_temperature(temperature);
-         // Crear cadena de datos usando snprintf (método correcto en C)
-        char data[100];
-        snprintf(data, sizeof(data), "field1=%.2f&field2=60&status=MQTTPUBLISH", temperature);
-        
+        // Verificar que MQTT esté conectado antes de publicar
+        if (mqtt_client != NULL && mqtt_connected) {
+            float temperature = 25.0 + (rand() % 100) / 10.0;
+            float humidity = temperature +5.0; // Simulación de humedad
+            char data[100];
+            snprintf(data, sizeof(data),
+                     "field1=%.2f&field2=%.2f&status=MQTTPUBLISH", temperature, humidity);
 
-        // Publicar datos en ThingSpeak
-        if (mqtt_client == NULL) {
-            publish_to_thingspeak(data);
-            vTaskDelay(pdMS_TO_TICKS(30000)); // Esperar 30 segundos antes de la siguiente publicación
             printf("Publicando datos: %s\n", data);
+            publish_to_thingspeak(data);
+            
+            // Intervalo de 20 segundos para ThingSpeak
+            vTaskDelay(pdMS_TO_TICKS(20000));
+        } else {
+            ESP_LOGW(TAG, "MQTT no conectado, esperando...");
+            vTaskDelay(pdMS_TO_TICKS(5000));
         }
-        else {
-            ESP_LOGE(TAG, "Cliente MQTT no inicializado, no se puede publicar en ThingSpeak.");
-        }
-        
-
-        vTaskDelay(pdMS_TO_TICKS(5000)); // Esperar 5 segundos antes de la siguiente lectura
     }
 }
 
-// Función principal de la aplicación
+
+// Función de conexión WiFi
+void wifi_init(void *pvParameter){
+    esp_netif_ip_info_t ip_info;
+
+    // Esperar por la conexión WiFi
+    printf("Conectando a WiFi...\n");
+    xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY);
+    esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"), &ip_info);
+    printf("Dirección IP: " IPSTR "\n", IP2STR(&ip_info.ip));
+    printf("Conexión WiFi exitosa.\n");
+
+    // Iniciar el cliente MQTT
+    ESP_LOGI(TAG, "Iniciando cliente MQTT...");
+    mqtt_app_start();
+
+    vTaskDelay(pdMS_TO_TICKS(3000)); // Esperar un segundo para asegurar que MQTT esté listo
+
+    // Iniciar la tarea de lectura de sensores
+    ESP_LOGI(TAG, "Iniciando tarea de lectura de sensores...");
+    xTaskCreate(sensor_task, "sensor_task", 4096, NULL, 5, NULL);
+
+    while (1)
+    {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+}
+
+
+
+
+
+
+// **** Función principal de la aplicación *****
 void app_main(void)
 {
     printf("Iniciando aplicación...\n");
@@ -335,14 +356,14 @@ void app_main(void)
                   IP_EVENT_STA_GOT_IP,
                   &wifi_event_handler,
                   NULL, NULL));
-    // Configurar ajustes de conexión WiFi
+    
+                  // Configurar ajustes de conexión WiFi
     wifi_config_t wifi_config = {
         .sta = {
             .ssid = WIFI_SSID,
             .password = WIFI_PASSWORD,
         },
     };
-
 
     // Configurar modo STA de WiFi
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
@@ -353,12 +374,11 @@ void app_main(void)
     printf("WiFi iniciado.\n");
 
     // Iniciar tarea de conexión WiFi
-    xTaskCreate(wifi_init, "wifi_init", 2048, NULL, 5, NULL);
+    xTaskCreate(wifi_init, "wifi_init", 4096, NULL, 5, NULL);  // Cambiar de 2048 a 4096
     printf("Tarea de conexión WiFi iniciada, conectando a %s...\n", WIFI_SSID);
 
-    // Iniciar cliente MQTT
-    mqtt_app_start();
+
 
     // Iniciar tarea de lectura de sensores
-    xTaskCreate(sensor_task, "sensor_task", 2048, NULL, 5, NULL);
+    //xTaskCreate(sensor_task, "sensor_task", 2048, NULL, 5, NULL);
 }
