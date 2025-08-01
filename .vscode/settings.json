@@ -8,5 +8,11 @@
   "idf.toolsPathWin": "d:\\ESP32-IDF\\espressif",
   "idf.customExtraVars": {
     "IDF_TARGET": "esp32"
+  },
+  "files.associations": {
+    "mqtt_client.h": "c",
+    "array": "c",
+    "string": "c",
+    "string_view": "c"
   }
 }
