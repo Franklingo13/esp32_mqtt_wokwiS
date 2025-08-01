@@ -8,66 +8,6 @@
         "env": []
     },
     {
-        "id": "01cd8839b6baecad",
-        "type": "mqtt in",
-        "z": "862f4876b87d50a6",
-        "name": "",
-        "topic": "WinMQTT",
-        "qos": "0",
-        "datatype": "auto-detect",
-        "broker": "fe82af2caa610c16",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
-        "inputs": 0,
-        "x": 360,
-        "y": 100,
-        "wires": [
-            [
-                "b4784e90ea20547e",
-                "aa52d41518d182a8"
-            ]
-        ]
-    },
-    {
-        "id": "b4784e90ea20547e",
-        "type": "ui_text",
-        "z": "862f4876b87d50a6",
-        "group": "619e83983fd39156",
-        "order": 1,
-        "width": 0,
-        "height": 0,
-        "name": "",
-        "label": "text",
-        "format": "{{msg.payload}}",
-        "layout": "row-spread",
-        "className": "",
-        "style": false,
-        "font": "",
-        "fontSize": 16,
-        "color": "#000000",
-        "x": 610,
-        "y": 160,
-        "wires": []
-    },
-    {
-        "id": "aa52d41518d182a8",
-        "type": "debug",
-        "z": "862f4876b87d50a6",
-        "name": "debug 1",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "payload",
-        "targetType": "msg",
-        "statusVal": "",
-        "statusType": "auto",
-        "x": 600,
-        "y": 100,
-        "wires": []
-    },
-    {
         "id": "46e63916b107145b",
         "type": "mqtt in",
         "z": "862f4876b87d50a6",
@@ -84,7 +24,8 @@
         "y": 400,
         "wires": [
             [
-                "f03dcd7419f69158"
+                "f03dcd7419f69158",
+                "d4bc400e39acce81"
             ]
         ]
     },
@@ -149,7 +90,8 @@
         "y": 500,
         "wires": [
             [
-                "fbeac0b410a643dd"
+                "fbeac0b410a643dd",
+                "9542e9b77eb7e099"
             ]
         ]
     },
@@ -298,7 +240,7 @@
         "gtype": "gage",
         "title": "Nivel de agua",
         "label": "units",
-        "format": "{{value}}",
+        "format": "{{value}}%",
         "min": 0,
         "max": "100",
         "colors": [
@@ -310,15 +252,15 @@
         "seg2": "",
         "diff": false,
         "className": "",
-        "x": 680,
-        "y": 780,
+        "x": 560,
+        "y": 740,
         "wires": []
     },
     {
         "id": "e82bd3e028f04fde",
         "type": "mqtt in",
         "z": "862f4876b87d50a6",
-        "name": "patioRiego",
+        "name": "patioNivel",
         "topic": "patio/vivero/nivel",
         "qos": "0",
         "datatype": "auto-detect",
@@ -328,10 +270,11 @@
         "rh": 0,
         "inputs": 0,
         "x": 300,
-        "y": 780,
+        "y": 740,
         "wires": [
             [
-                "ec359ee191af701a"
+                "ec359ee191af701a",
+                "d5d9d3d5371bc6c7"
             ]
         ]
     },
@@ -340,7 +283,7 @@
         "type": "debug",
         "z": "862f4876b87d50a6",
         "name": "debug Riego",
-        "active": true,
+        "active": false,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -356,7 +299,7 @@
         "id": "0e0fea0254c7ccd4",
         "type": "mqtt in",
         "z": "862f4876b87d50a6",
-        "name": "patioTemp",
+        "name": "peceraTemp",
         "topic": "patio/pecera/temperatura",
         "qos": "0",
         "datatype": "auto-detect",
@@ -365,11 +308,12 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 280,
-        "y": 900,
+        "x": 310,
+        "y": 840,
         "wires": [
             [
-                "ea39424d1d837319"
+                "ea39424d1d837319",
+                "ec595520882c6046"
             ]
         ]
     },
@@ -411,11 +355,279 @@
         "outputs": 1,
         "useDifferentColor": false,
         "className": "",
-        "x": 700,
-        "y": 900,
+        "x": 560,
+        "y": 840,
         "wires": [
             []
         ]
+    },
+    {
+        "id": "28c7bdda905819ed",
+        "type": "mqtt out",
+        "z": "862f4876b87d50a6",
+        "name": "",
+        "topic": "channels/3017431/publish",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "506b19fa0cd2ae80",
+        "x": 1390,
+        "y": 760,
+        "wires": []
+    },
+    {
+        "id": "7121300507af6ee2",
+        "type": "function",
+        "z": "862f4876b87d50a6",
+        "name": "function 1",
+        "func": "var field1 = msg.payload[0];\nvar field2 = msg.payload[1];\nvar field3 = msg.payload[2];\nvar field4 = msg.payload[3];\nmsg.topic =\"channels/3017431/publish\"\nmsg.payload = \"field1=\"+ field1 +\"&field2=\"+field2+\"&field3=\"+ field3 +\"&field4=\"+field4+\"&status=MQTTPUBLISH\"\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1160,
+        "y": 760,
+        "wires": [
+            [
+                "28c7bdda905819ed",
+                "ea59c481222bf5f8"
+            ]
+        ]
+    },
+    {
+        "id": "9542e9b77eb7e099",
+        "type": "function",
+        "z": "862f4876b87d50a6",
+        "name": "function 2",
+        "func": "//var field2 = msg.payload;\n//var field2 = msg.payload;\nmsg.topic = \"humedad\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 840,
+        "y": 500,
+        "wires": [
+            [
+                "2f9dfd61c92d2493"
+            ]
+        ]
+    },
+    {
+        "id": "2f9dfd61c92d2493",
+        "type": "join",
+        "z": "862f4876b87d50a6",
+        "name": "",
+        "mode": "custom",
+        "build": "array",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "useparts": false,
+        "accumulate": false,
+        "timeout": "",
+        "count": "4",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 1010,
+        "y": 760,
+        "wires": [
+            [
+                "7121300507af6ee2"
+            ]
+        ]
+    },
+    {
+        "id": "d4bc400e39acce81",
+        "type": "function",
+        "z": "862f4876b87d50a6",
+        "name": "function 3",
+        "func": "//var field2 = msg.payload;\n//var field2 = msg.payload;\nmsg.topic = \"temperatura\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 840,
+        "y": 400,
+        "wires": [
+            [
+                "2f9dfd61c92d2493"
+            ]
+        ]
+    },
+    {
+        "id": "e67573a88b84f28c",
+        "type": "mqtt in",
+        "z": "862f4876b87d50a6",
+        "name": "peceraAlimento",
+        "topic": "patio/pecera/alimento",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "fe82af2caa610c16",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 740,
+        "y": 940,
+        "wires": [
+            [
+                "d46f445a82ee63c0"
+            ]
+        ]
+    },
+    {
+        "id": "afadb626e9ad9637",
+        "type": "mqtt out",
+        "z": "862f4876b87d50a6",
+        "name": "peceraAlimento",
+        "topic": "patio/pecera/alimento",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "fe82af2caa610c16",
+        "x": 440,
+        "y": 940,
+        "wires": []
+    },
+    {
+        "id": "40ec5dd125e8db7a",
+        "type": "ui_switch",
+        "z": "862f4876b87d50a6",
+        "name": "",
+        "label": "Alimentar",
+        "tooltip": "",
+        "group": "082b2241c0103ce0",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "passthru": true,
+        "decouple": "false",
+        "topic": "topic",
+        "topicType": "msg",
+        "style": "",
+        "onvalue": "true",
+        "onvalueType": "bool",
+        "onicon": "",
+        "oncolor": "",
+        "offvalue": "false",
+        "offvalueType": "bool",
+        "officon": "",
+        "offcolor": "",
+        "animate": false,
+        "className": "",
+        "x": 220,
+        "y": 940,
+        "wires": [
+            [
+                "afadb626e9ad9637"
+            ]
+        ]
+    },
+    {
+        "id": "d46f445a82ee63c0",
+        "type": "ui_led",
+        "z": "862f4876b87d50a6",
+        "order": 2,
+        "group": "082b2241c0103ce0",
+        "width": 0,
+        "height": 0,
+        "label": "",
+        "labelPlacement": "left",
+        "labelAlignment": "left",
+        "colorForValue": [
+            {
+                "color": "#ff0000",
+                "value": "false",
+                "valueType": "bool"
+            },
+            {
+                "color": "#008000",
+                "value": "true",
+                "valueType": "bool"
+            }
+        ],
+        "allowColorForValueInMessage": false,
+        "shape": "circle",
+        "showGlow": true,
+        "name": "",
+        "x": 950,
+        "y": 940,
+        "wires": []
+    },
+    {
+        "id": "d5d9d3d5371bc6c7",
+        "type": "function",
+        "z": "862f4876b87d50a6",
+        "name": "function 4",
+        "func": "//var field2 = msg.payload;\n//var field2 = msg.payload;\nmsg.topic = \"nivel\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 740,
+        "wires": [
+            [
+                "2f9dfd61c92d2493"
+            ]
+        ]
+    },
+    {
+        "id": "ec595520882c6046",
+        "type": "function",
+        "z": "862f4876b87d50a6",
+        "name": "function 5",
+        "func": "//var field2 = msg.payload;\n//var field2 = msg.payload;\nmsg.topic = \"peceraTemp\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 780,
+        "y": 840,
+        "wires": [
+            [
+                "2f9dfd61c92d2493"
+            ]
+        ]
+    },
+    {
+        "id": "ea59c481222bf5f8",
+        "type": "debug",
+        "z": "862f4876b87d50a6",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1340,
+        "y": 860,
+        "wires": []
     },
     {
         "id": "fe82af2caa610c16",
@@ -480,6 +692,37 @@
         "width": 6,
         "collapse": false,
         "className": ""
+    },
+    {
+        "id": "506b19fa0cd2ae80",
+        "type": "mqtt-broker",
+        "name": "ThingSpeak",
+        "broker": "mqtt3.thingspeak.com",
+        "port": 1883,
+        "clientid": "Dw0XAy4NMBg1Ci0nNhkjOQE",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
     },
     {
         "id": "63f5f25f58b1e2c1",
