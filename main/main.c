@@ -405,6 +405,63 @@ float leerDistancia() {
     return (duration * 34300.0) / 2.0; // Dividir por 2 porque es ida y vuelta
 }
 
+// Función para calcular el nivel de agua basado en la distancia medida
+float calcular_nivel_agua(float distancia_cm) {
+    // Validar entrada
+    if (distancia_cm < 0) {
+        ESP_LOGE(TAG, "Error: Distancia inválida (%.2f cm)", distancia_cm);
+        return -1.0; // Valor de error
+    }
+    
+    float nivel_porcentaje;
+    
+    // Aplicar límites y calcular porcentaje
+    if (distancia_cm <= 2.0) {
+        nivel_porcentaje = 100.0;
+        ESP_LOGI(TAG, "Tanque lleno detectado (distancia: %.2f cm)", distancia_cm);
+    } else if (distancia_cm >= 400.0) {
+        nivel_porcentaje = 0.0;
+        ESP_LOGI(TAG, "Tanque vacío detectado (distancia: %.2f cm)", distancia_cm);
+    } else {
+        // Cálculo proporcional
+        float rango_total = 400.0 - 2.0;
+        float distancia_desde_minimo = distancia_cm - 2.0;
+        nivel_porcentaje = ((rango_total - distancia_desde_minimo) / rango_total) * 100.0;
+    }
+    
+    // Asegurar que el resultado esté en el rango válido
+    if (nivel_porcentaje < 0.0) nivel_porcentaje = 0.0;
+    if (nivel_porcentaje > 100.0) nivel_porcentaje = 100.0;
+    
+    ESP_LOGI(TAG, "Conversión: %.2f cm → %.2f%% de agua", distancia_cm, nivel_porcentaje);
+    return nivel_porcentaje;
+}
+
+// Función mejorada para procesar el sensor ultrasónico
+void procesar_sensor_ultrasonico(void) {
+    float distancia = leerDistancia();
+    
+    if (distancia < 0) {
+        ESP_LOGE(TAG, "Error al leer sensor ultrasónico");
+        return;
+    }
+    
+    ESP_LOGI(TAG, "Distancia medida: %.2f cm", distancia);
+    
+    float nivel_agua = calcular_nivel_agua(distancia);
+    
+    if (nivel_agua >= 0) {
+        publish_water_level(nivel_agua);
+        
+        // Opcional: Alertas basadas en nivel
+        if (nivel_agua < 10.0) {
+            ESP_LOGW(TAG, "¡ALERTA! Nivel de agua muy bajo: %.2f%%", nivel_agua);
+        } else if (nivel_agua > 95.0) {
+            ESP_LOGI(TAG, "Tanque casi lleno: %.2f%%", nivel_agua);
+        }
+    }
+}
+
 // Modificar activate_relay para publicar el estado
 void activate_relay(bool state) {
     static bool last_state = false;  // Para evitar cambios innecesarios
@@ -504,14 +561,6 @@ void sensor_task(void *pvParameter)
     while (1) {
         // Verificar que MQTT esté conectado antes de publicar
         if (mqtt_client != NULL && mqtt_connected) {
-            float temperature = 25.0 + (rand() % 100) / 10.0;
-            float humidity = temperature +5.0; // Simulación de humedad
-            char data[100];
-            snprintf(data, sizeof(data),
-                     "field1=%.2f&field2=%.2f&status=MQTTPUBLISH", temperature, humidity);
-
-            //printf("Publicando datos: %s\n", data);
-            publish_to_thingspeak(data);
 
             // Lectura de sensores
             // Lógica para leer otros sensores como NTC, HC-SR04, DHT22, etc.
@@ -522,13 +571,11 @@ void sensor_task(void *pvParameter)
                 ESP_LOGI(TAG, "Distancia medida: %.2f cm", distancia);
             }
 
-            //publish_temperature(temperature); // Publicar temperatura
-            //publish_humidity(humidity);       // Publicar humedad
+            // Leer y procesar sensor ultrasónico
+            procesar_sensor_ultrasonico();
 
             read_dht22(); // Leer DHT22 y publicar temperatura y humedad
-            publish_water_level(distancia);   // Publicar nivel de agua
-            // Activar el relé si se recibe un True en el topic de riego
-            //subscribe_to_relay_topic(); // Suscribirse al topic de riego
+         
 
             // Lógica de control
             activate_relay(relay_state);
