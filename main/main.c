@@ -43,12 +43,13 @@
 #define WIFI_PASSWORD "" // red visible en Wokwi, sin contraseña
 
 // Configuración MQTT
-#define CONFIG_BROKER_URL "mqtt3.thingspeak.com" // URL del broker MQTT público
+//#define CONFIG_BROKER_URL "mqtt3.thingspeak.com" // URL del broker MQTT público
+#define CONFIG_BROKER_URL "host.wokwi.internal"
 #define CONFIG_BROKER_PORT 1883 // Puerto del broker MQTT
-#define CONFIG_BROKER_CLIENT_ID "PB8HNSc6KDQMDRU1HxYtCBE" // ID del cliente MQTT
-#define CONFIG_BROKER_USERNAME "PB8HNSc6KDQMDRU1HxYtCBE" // Usuario del broker MQTT (si es necesario)
-#define CONFIG_BROKER_PASSWORD "lZWwPXhhWzTvoePzS3j3ueJp" // Contraseña del broker MQTT (si es necesario)
-#define TOPIC_TS "channels/3012108/publish" // Tema para publicar datos en ThingSpeak
+#define CONFIG_BROKER_CLIENT_ID "" // ID del cliente MQTT
+#define CONFIG_BROKER_USERNAME "" // Usuario del broker MQTT (si es necesario)
+#define CONFIG_BROKER_PASSWORD "" // Contraseña del broker MQTT (si es necesario)
+#define TOPIC_TS "WinMQTT" // Tema para publicar datos en ThingSpeak
 static esp_mqtt_client_handle_t mqtt_client = NULL;
 static bool mqtt_connected = false;
 
@@ -191,14 +192,30 @@ static void mqtt_app_start(void)
                 .uri = broker_uri,
             },
         },
-        .credentials = {
-            .client_id = CONFIG_BROKER_CLIENT_ID,
-            .username = CONFIG_BROKER_USERNAME,
-            .authentication = {
-                .password = CONFIG_BROKER_PASSWORD,
-            }
-        }
     };
+
+    // Configurar credenciales solo si no están vacías
+    if (strlen(CONFIG_BROKER_CLIENT_ID) > 0) {
+        mqtt_cfg.credentials.client_id = CONFIG_BROKER_CLIENT_ID;
+        ESP_LOGI(TAG, "Cliente MQTT configurado con client_id: %s", CONFIG_BROKER_CLIENT_ID);
+    } else {
+        ESP_LOGI(TAG, "Cliente MQTT sin client_id (generará uno automático)");
+    }
+
+    if (strlen(CONFIG_BROKER_USERNAME) > 0) {
+        mqtt_cfg.credentials.username = CONFIG_BROKER_USERNAME;
+        ESP_LOGI(TAG, "Cliente MQTT configurado con username: %s", CONFIG_BROKER_USERNAME);
+    } else {
+        ESP_LOGI(TAG, "Cliente MQTT sin username");
+    }
+
+    if (strlen(CONFIG_BROKER_PASSWORD) > 0) {
+        mqtt_cfg.credentials.authentication.password = CONFIG_BROKER_PASSWORD;
+        ESP_LOGI(TAG, "Cliente MQTT configurado con password");
+    } else {
+        ESP_LOGI(TAG, "Cliente MQTT sin password");
+    }
+
 #if CONFIG_BROKER_URL_FROM_STDIN
     char line[128];
 
@@ -253,6 +270,9 @@ void publish_to_thingspeak(const char *data)
         ESP_LOGE(TAG, "Cliente MQTT no inicializado, no se puede publicar en ThingSpeak.");
     }
 }
+// Funciones para publicar datos de sensores
+
+
 
 // Función para leer sensores y publicar datos
 void sensor_task(void *pvParameter)
@@ -266,8 +286,11 @@ void sensor_task(void *pvParameter)
             snprintf(data, sizeof(data),
                      "field1=%.2f&field2=%.2f&status=MQTTPUBLISH", temperature, humidity);
 
-            printf("Publicando datos: %s\n", data);
+            //printf("Publicando datos: %s\n", data);
             publish_to_thingspeak(data);
+
+            // Lectura de sensores
+            // Lógica para leer otros sensores como NTC, HC-SR04, DHT22, etc.
             
             // Intervalo de 20 segundos para ThingSpeak
             vTaskDelay(pdMS_TO_TICKS(20000));
