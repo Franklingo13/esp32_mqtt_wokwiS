@@ -49,7 +49,9 @@
 #define CONFIG_BROKER_CLIENT_ID "" // ID del cliente MQTT
 #define CONFIG_BROKER_USERNAME "" // Usuario del broker MQTT (si es necesario)
 #define CONFIG_BROKER_PASSWORD "" // Contraseña del broker MQTT (si es necesario)
-#define TOPIC_TS "WinMQTT" // Tema para publicar datos en ThingSpeak
+#define TOPIC_TS "channels/3017431/publish" // Topic para publicar datos en ThingSpeak
+#define TOPIC_TEMP "patio/vivero/temperatura" // Topic para publicar temperatura
+#define TOPIC_HUMIDITY "patio/vivero/humedad" // Topic para publicar humedad
 static esp_mqtt_client_handle_t mqtt_client = NULL;
 static bool mqtt_connected = false;
 
@@ -252,10 +254,22 @@ void publish_temperature(float temperature) {
     if (mqtt_client != NULL) {
         char data[50];
         snprintf(data, sizeof(data), "%.2f", temperature);
-        int msg_id = esp_mqtt_client_publish(mqtt_client, TOPIC_TS, data, 0, 1, 0);
+        int msg_id = esp_mqtt_client_publish(mqtt_client, TOPIC_TEMP, data, 0, 1, 0);
         ESP_LOGI(TAG, "Temperatura publicada: %s, msg_id=%d", data, msg_id);
     } else {
-        ESP_LOGE(TAG, "MQTT client not initialized, cannot publish temperature.");
+        ESP_LOGE(TAG, "Cliente MQTT no inicializado, no se puede publicar temperatura.");
+    }
+}
+
+// Función para publicar humedad
+void publish_humidity(float humidity) {
+    if (mqtt_client != NULL) {
+        char data[50];
+        snprintf(data, sizeof(data), "%.2f", humidity);
+        int msg_id = esp_mqtt_client_publish(mqtt_client, TOPIC_HUMIDITY, data, 0, 1, 0);
+        ESP_LOGI(TAG, "Humedad publicada: %s, msg_id=%d", data, msg_id);
+    } else {
+        ESP_LOGE(TAG, "Cliente MQTT no inicializado, no se puede publicar humedad.");
     }
 }
 
@@ -270,9 +284,6 @@ void publish_to_thingspeak(const char *data)
         ESP_LOGE(TAG, "Cliente MQTT no inicializado, no se puede publicar en ThingSpeak.");
     }
 }
-// Funciones para publicar datos de sensores
-
-
 
 // Función para leer sensores y publicar datos
 void sensor_task(void *pvParameter)
@@ -291,7 +302,10 @@ void sensor_task(void *pvParameter)
 
             // Lectura de sensores
             // Lógica para leer otros sensores como NTC, HC-SR04, DHT22, etc.
-            
+
+            publish_temperature(temperature); // Publicar temperatura
+            publish_humidity(humidity);       // Publicar humedad
+
             // Intervalo de 20 segundos para ThingSpeak
             vTaskDelay(pdMS_TO_TICKS(20000));
         } else {
