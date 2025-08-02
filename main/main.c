@@ -55,11 +55,13 @@
 #define TOPIC_NIVEL "patio/vivero/nivel" // Topic para publicar nivel de agua
 #define TOPIC_RIEGO "patio/vivero/riego" // Topic para controlar el riego: activa el relé
 #define TOPIC_NTC "patio/pecera/temperatura" // Topic para publicar temperatura NTC
+#define TOPIC_SERVO "patio/pecera/alimento" // Topic para controlar el servo motor
 
 // Variables globales
 static esp_mqtt_client_handle_t mqtt_client = NULL;
 static bool mqtt_connected = false;
 static bool relay_state = false;  // Variable para controlar el estado del relé
+static bool servo_state = false;  // Variable para controlar el estado del servo
 const float NTC_BETA = 3950.0; // Constante B del NTC
 float humedad = 0.0, temperatura = 0.0;
 // AGREGAR: Variable global para el ADC
@@ -146,14 +148,18 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED - Conectado al broker MQTT");
         mqtt_connected = true;
 
-        // AGREGAR: Suscribirse al topic de riego AL CONECTARSE
+        // Suscribirse al topic de riego AL CONECTARSE
         msg_id = esp_mqtt_client_subscribe(client, TOPIC_RIEGO, 0);
         ESP_LOGI(TAG, "Suscripción al topic de riego realizada, msg_id=%d", msg_id);
 
+        // Suscribirse al topic de servo
+        msg_id = esp_mqtt_client_subscribe(client, TOPIC_SERVO, 0);
+        ESP_LOGI(TAG, "Suscripción al topic de servo realizada, msg_id=%d", msg_id);
+
         // Mensaje inicial de prueba
-        msg_id = esp_mqtt_client_publish(client, TOPIC_TS, 
-            "field1=45&field2=60&status=MQTTPUBLISH", 0, 0, 0);
-        ESP_LOGI(TAG, "Publicación de prueba realizada, msg_id=%d", msg_id);
+        //msg_id = esp_mqtt_client_publish(client, TOPIC_TS, 
+        //    "field1=45&field2=60&status=MQTTPUBLISH", 0, 0, 0);
+        //ESP_LOGI(TAG, "Publicación de prueba realizada, msg_id=%d", msg_id);
         
 
         //msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
@@ -198,6 +204,21 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
                        strncmp(event->data, "OFF", event->data_len) == 0) {
                 relay_state = false;
                 ESP_LOGI(TAG, "Comando recibido: Desactivar riego");
+            }
+        } else if (strncmp(event->topic, TOPIC_SERVO, event->topic_len) == 0) {
+            // Procesar comandos para el servo motor
+            if (strncmp(event->data, "true", event->data_len) == 0 || 
+                strncmp(event->data, "1", event->data_len) == 0 ||
+                strncmp(event->data, "ON", event->data_len) == 0) {
+                servo_state = true;
+                ESP_LOGI(TAG, "Comando recibido: Activar servo");
+                set_servo_angle(90); // Activar servo a 90 grados
+            } else if (strncmp(event->data, "false", event->data_len) == 0 || 
+                       strncmp(event->data, "0", event->data_len) == 0 ||
+                       strncmp(event->data, "OFF", event->data_len) == 0) {
+                servo_state = false;
+                ESP_LOGI(TAG, "Comando recibido: Desactivar servo");
+                set_servo_angle(0); // Desactivar servo a 0 grados
             }
         }
         break;
@@ -300,6 +321,8 @@ static void subscribe_to_relay_topic(void)
         ESP_LOGE(TAG, "Cliente MQTT no inicializado o no conectado, no se puede suscribir al topic de riego.");
     }
 }
+
+
 
 // Función para publicar temperatura
 void publish_temperature(float temperature) {
@@ -503,7 +526,7 @@ void read_dht22(void)
     }
 }
 
-// AGREGAR: Función para inicializar el ADC una sola vez
+// Función para inicializar el ADC una sola vez
 void init_adc(void) {
     if (!adc_initialized) {
         adc_oneshot_unit_init_cfg_t init_config = {
@@ -520,6 +543,11 @@ void init_adc(void) {
         adc_initialized = true;
         ESP_LOGI(TAG, "ADC inicializado correctamente");
     }
+}
+
+// Función para inicializar el servo
+void init_servo(void) {
+    setup_pwm(SERVO_PIN); // Configurar PWM en el pin del servo
 }
 
 // Función para lectura de NTC
@@ -634,6 +662,7 @@ void app_main(void)
     configure_led();
     configure_relay(); // Configurar el relé
     init_adc(); // Inicializar ADC una sola vez
+    init_servo(); // Inicializar el servomotor
 
     // Inicializar NVS
     esp_err_t ret = nvs_flash_init();
