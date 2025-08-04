@@ -460,7 +460,7 @@ float calcular_nivel_agua(float distancia_cm) {
     return nivel_porcentaje;
 }
 
-// Función mejorada para procesar el sensor ultrasónico
+// Función para procesar el sensor ultrasónico
 void procesar_sensor_ultrasonico(void) {
     float distancia = leerDistancia();
     
@@ -476,7 +476,7 @@ void procesar_sensor_ultrasonico(void) {
     if (nivel_agua >= 0) {
         publish_water_level(nivel_agua);
         
-        // Opcional: Alertas basadas en nivel
+        // Alertas basadas en nivel
         if (nivel_agua < 10.0) {
             ESP_LOGW(TAG, "¡ALERTA! Nivel de agua muy bajo: %.2f%%", nivel_agua);
         } else if (nivel_agua > 95.0) {
