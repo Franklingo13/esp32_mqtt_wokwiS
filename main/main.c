@@ -475,12 +475,15 @@ void procesar_sensor_ultrasonico(void) {
     
     if (nivel_agua >= 0) {
         publish_water_level(nivel_agua);
-        
-        // Alertas basadas en nivel
+        // Control automático del relé según el nivel de agua
         if (nivel_agua < 10.0) {
             ESP_LOGW(TAG, "¡ALERTA! Nivel de agua muy bajo: %.2f%%", nivel_agua);
-        } else if (nivel_agua > 95.0) {
+            relay_state = true; // Activar relé
+            publish_relay_status(true);
+        } else if (nivel_agua > 80.0) {
             ESP_LOGI(TAG, "Tanque casi lleno: %.2f%%", nivel_agua);
+            relay_state = false; // Desactivar relé
+            publish_relay_status(false);
         }
     }
 }
