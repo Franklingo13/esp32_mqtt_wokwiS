@@ -42,13 +42,6 @@
     { "type": "wokwi-vcc", "id": "vcc3", "top": 298.36, "left": -268.8, "attrs": {} },
     { "type": "wokwi-gnd", "id": "gnd3", "top": 336, "left": -125.4, "attrs": {} },
     {
-      "type": "wokwi-pushbutton",
-      "id": "btn1",
-      "top": 102.2,
-      "left": 9.6,
-      "attrs": { "color": "green", "xray": "1", "bounce": "1" }
-    },
-    {
       "type": "wokwi-resistor",
       "id": "r1",
       "top": 158.4,
@@ -151,17 +144,13 @@
     [ "gnd5:GND", "r2:2", "black", [ "v0" ] ],
     [ "vcc2:VCC", "relay1:COM", "red", [ "v0", "h-38.4" ] ],
     [ "bb1:25t.a", "esp:12", "magenta", [ "h0" ] ],
-    [ "btn1:1.l", "bb1:5b.h", "", [ "$bb" ] ],
-    [ "btn1:2.l", "bb1:7b.h", "", [ "$bb" ] ],
-    [ "btn1:1.r", "bb1:5t.c", "", [ "$bb" ] ],
-    [ "btn1:2.r", "bb1:7t.c", "", [ "$bb" ] ],
+    [ "bb1:bn.20", "bb1:24b.j", "black", [ "h0" ] ],
     [ "r1:1", "bb1:7t.a", "", [ "$bb" ] ],
     [ "r1:2", "bb1:13t.a", "", [ "$bb" ] ],
-    [ "r3:1", "bb1:25t.b", "", [ "$bb" ] ],
-    [ "r3:2", "bb1:25b.f", "", [ "$bb" ] ],
-    [ "bb1:bn.20", "bb1:24b.j", "black", [ "h0" ] ],
     [ "led3:A", "bb1:25b.i", "", [ "$bb" ] ],
-    [ "led3:C", "bb1:24b.i", "", [ "$bb" ] ]
+    [ "led3:C", "bb1:24b.i", "", [ "$bb" ] ],
+    [ "r3:1", "bb1:25t.b", "", [ "$bb" ] ],
+    [ "r3:2", "bb1:25b.f", "", [ "$bb" ] ]
   ],
   "dependencies": {}
 }
